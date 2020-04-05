@@ -10,6 +10,7 @@
 extern "C" int HKSynchronizeNanoPreferencesUserDefaults(NSString* key, NSSet* value);
 
 BOOL alertShowed = NO;
+BOOL resetECG = NO;
 #define dictPath @"/var/mobile/Library/Preferences/com.apple.private.health.heart-rhythm.plist"
 
 %group NanoSettingsSync
@@ -56,8 +57,13 @@ BOOL alertShowed = NO;
 %hook HKHeartRhythmAvailability
 - (bool)isElectrocardiogramOnboardingCompleted {
     BOOL result = %orig;
-    if (result == NO) {
+    if (resetECG != YES && result != YES) {
+        [self resetElectrocardiogramOnboarding];
         [self setElectrocardiogramOnboardingCompleted];
+        resetECG = YES;
+
+        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"ECG Enabler Success" message:@"Your Apple Watch ECG feature is enabled.\nYou can remove this tweak now. (And I recommand you do this)" delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
+        [alert show];
     }
     return %orig;
 }
