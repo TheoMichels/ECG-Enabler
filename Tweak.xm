@@ -1,7 +1,10 @@
+#import <firmware.h>
+
 @interface HKHeartRhythmAvailability
 - (void)resetElectrocardiogramOnboarding;
 + (id)activePairedDevice;
 + (BOOL)isElectrocardiogramSupportedOnWatch:(id)watch;
+- (void)setElectrocardiogramOnboardingCompleted;
 @end
 
 extern "C" int HKSynchronizeNanoPreferencesUserDefaults(NSString* key, NSSet* value);
@@ -49,10 +52,25 @@ BOOL alertShowed = NO;
 %end
 %end
 
+%group BypassMPN
+%hook HKHeartRhythmAvailability
+- (bool)isElectrocardiogramOnboardingCompleted {
+    BOOL result = %orig;
+    if (result == NO) {
+        [self setElectrocardiogramOnboardingCompleted];
+    }
+    return %orig;
+}
+%end
+%end
+
 %ctor {
     %init;
 
-    if ([[NSFileManager defaultManager] fileExistsAtPath:dictPath]) {
+    if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_13_4) {
+        %init(BypassMPN);
+    }
+    else if ([[NSFileManager defaultManager] fileExistsAtPath:dictPath]) {
         NSMutableDictionary *dict = [NSMutableDictionary dictionaryWithContentsOfFile:dictPath];
         if ([dict[@"ECGEnablerDone"] boolValue] != YES) {
             %init(NanoSettingsSync);
